@@ -12,7 +12,7 @@ b = (n-m)/k
 d = 5                #rank of X
 repl = 1            #number of replicates
 
-graph = function(P,n)
+graph = function(P,n)   #function to generate graph
 {
   A = matrix(0, nrow = n, ncol = n)
   A[col(A) > row(A)] = runif(n*(n-1)/2)
@@ -23,7 +23,7 @@ graph = function(P,n)
   return(A)
 }
 
-ASE = function(A, dim)
+ASE = function(A, dim)    #ASE function based on eign()
 {
   A.eig = eigen(A)
   A.eig.values = A.eig$values[1:dim]
@@ -51,7 +51,7 @@ ASE = function(A, dim)
 # }
 
 
-procr= function(X,Y)
+procr= function(X,Y)    # procrustes transform of X wrt Y
 {
   tmp = t(X) %*% Y
   tmp.svd = svd(tmp)
@@ -63,6 +63,7 @@ procr= function(X,Y)
 est = function(A,m,k){          # Function for estimation
   n = nrow(A)
   
+  # select the highest degree vertices in the common region
   S = apply(A, 1, sum)
   common = tail(order(S),m)
   x = head(order(S),n-m)
@@ -73,12 +74,14 @@ est = function(A,m,k){          # Function for estimation
     samp = rbind(samp, sample(x, size = b, replace = FALSE))
     x = setdiff(x,samp)
   }
+  # samp has all the subsample indices
   
   ind1 = c(common,samp[1,])
   A.ref = A[ind1,ind1]
   X.hat.ref = ASE(A.ref,d)
   X.ref.0 = X.hat.ref[1:m,]
   X.ref.1 = X.hat.ref[(m+1):(m+b),]
+  # Finding the reference latent vectors
   
   
   
@@ -90,13 +93,13 @@ est = function(A,m,k){          # Function for estimation
       X.hat.sub = ASE(A.sub,d)
       X.sub.0 = X.hat.sub[1:m,]
       
-      H = procr(X.sub.0, X.ref.0)$W
+      H = procr(X.sub.0, X.ref.0)$W      # rotate the new estimates for stiching
       X.hat.sub[(m+1):(m+b),] %*% H
     }
   
   
   
-  
+  # rearrange the vertices into the final matrix
   X.fin = matrix(0, n, d)
   
   for(j in 1:length(common)) {X.fin[common[j],] = X.ref.0[j,]}
@@ -110,8 +113,10 @@ est = function(A,m,k){          # Function for estimation
 registerDoParallel(16)
 
 # N1 = N2 = T1 = T2 = c()
+# We doing only one replication for now to save total run time
 
 
+#Simulation experiment: generate from P
 X = matrix(runif(n*d),n,d)
 P = X %*% t(X)
 P = P/max(P)
@@ -139,8 +144,6 @@ normdiff2 = norm(P-P.fin,type = "F")/norm(P, type= "F")
 N2 = normdiff2
 
 T2 = t4-t3
-
-
 
 # for(r in 1:repl)
 # {
